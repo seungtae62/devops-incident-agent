@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    BASE_DIR = Path(__file__).resolve().parent
+    # Project root directory (parent of src/)
+    BASE_DIR = Path(__file__).resolve().parent.parent
     DATA_DIR = BASE_DIR / "data"
     VECTORDB_DIR = BASE_DIR / "vectordb"
 
@@ -17,6 +18,9 @@ class Config:
     AI_DEPLOY_EMBED_3_LARGE = os.getenv("AI_DEPLOY_EMBED_3_LARGE")
     AI_DEPLOY_EMBED_3_SMALL = os.getenv("AI_DEPLOY_EMBED_3_SMALL")
     AI_DEPLOY_EMBED_ADA = os.getenv("AI_DEPLOY_EMBED_ADA")
+
+    # Qdrant Settings
+    QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 
     @classmethod
     def validate(cls):
