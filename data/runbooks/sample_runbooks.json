@@ -1,0 +1,102 @@
+[
+  {
+    "content": "# API Gateway Timeout Recovery Procedure\n\n## Symptoms\n- 504 Gateway Timeout errors\n- Slow response times (>30s)\n- Connection timeout errors in logs\n\n## Diagnostic Steps\n1. Check API Gateway logs for timeout patterns\n2. Verify backend service health status\n3. Check database connection pool metrics\n4. Review recent deployment changes\n\n## Resolution Steps\n1. Identify affected backend service from logs\n2. Check service resource usage (CPU, memory, connections)\n3. If connection pool exhausted:\n   - Temporarily increase pool size\n   - Kill long-running queries\n   - Restart service if necessary\n4. If backend service unresponsive:\n   - Check service logs for errors\n   - Verify database connectivity\n   - Scale up service instances if needed\n5. Monitor for 15 minutes to ensure stability\n\n## Prevention\n- Implement connection timeout limits\n- Add query timeout enforcement\n- Configure automatic connection pool scaling\n- Set up alerts for connection pool usage >80%",
+    "metadata": {
+      "runbook_id": "RB-001",
+      "service": "API Gateway",
+      "category": "troubleshooting",
+      "estimated_time": "15-30 minutes",
+      "severity": "Critical"
+    }
+  },
+  {
+    "content": "# Database Performance Degradation Response\n\n## Symptoms\n- Slow query performance\n- High CPU usage on database\n- Increasing query queue depth\n- Application timeouts\n\n## Immediate Actions\n1. Check current database metrics:\n   ```bash\n   SELECT * FROM pg_stat_activity WHERE state = 'active';\n   ```\n2. Identify long-running queries:\n   ```bash\n   SELECT pid, now() - pg_stat_activity.query_start AS duration, query \n   FROM pg_stat_activity \n   WHERE state = 'active' ORDER BY duration DESC;\n   ```\n3. Check for table locks:\n   ```bash\n   SELECT * FROM pg_locks WHERE NOT granted;\n   ```\n\n## Resolution Steps\n1. Kill problematic long-running queries:\n   ```bash\n   SELECT pg_terminate_backend(pid);\n   ```\n2. Check for missing indexes using EXPLAIN ANALYZE\n3. Create necessary indexes during low-traffic period\n4. Analyze table statistics:\n   ```bash\n   ANALYZE table_name;\n   ```\n5. Consider query optimization or caching\n\n## Post-Incident\n- Review slow query logs\n- Add indexes for frequently scanned columns\n- Implement query performance monitoring\n- Set up alerts for query duration >10s",
+    "metadata": {
+      "runbook_id": "RB-002",
+      "service": "Database",
+      "category": "performance",
+      "estimated_time": "30-60 minutes",
+      "severity": "High"
+    }
+  },
+  {
+    "content": "# Redis Cache Failure Recovery\n\n## Symptoms\n- READONLY errors on Redis\n- Connection refused errors\n- Cache miss rate at 100%\n- Application performance degradation\n\n## Diagnostic Steps\n1. Check Redis cluster status:\n   ```bash\n   redis-cli CLUSTER INFO\n   redis-cli INFO replication\n   ```\n2. Verify master/replica configuration\n3. Check Redis logs for errors\n4. Review Sentinel logs if using Redis Sentinel\n\n## Recovery Steps\n1. If master is down:\n   - Check if automatic failover occurred\n   - If not, manually promote replica:\n     ```bash\n     redis-cli -h replica-host REPLICAOF NO ONE\n     ```\n   - Update application configuration to new master\n2. If replica is readonly:\n   - Verify master is healthy\n   - Check replication lag\n   - Reconnect replica to master if needed\n3. Restart Redis instances if necessary\n4. Verify data consistency after recovery\n\n## Validation\n1. Test write operations\n2. Verify replication is working\n3. Check application cache hit rate\n4. Monitor for 30 minutes\n\n## Prevention\n- Configure Redis Sentinel for automatic failover\n- Set up health checks and monitoring\n- Test failover procedures quarterly\n- Document master/replica topology",
+    "metadata": {
+      "runbook_id": "RB-003",
+      "service": "Cache",
+      "category": "recovery",
+      "estimated_time": "20-45 minutes",
+      "severity": "Critical"
+    }
+  },
+  {
+    "content": "# Kubernetes Pod OOMKilled Recovery\n\n## Symptoms\n- Pods continuously restarting\n- OOMKilled status in pod events\n- Application crashes without error logs\n- Memory usage at 100%\n\n## Diagnostic Steps\n1. Check pod status and events:\n   ```bash\n   kubectl describe pod <pod-name>\n   kubectl get events --sort-by='.lastTimestamp'\n   ```\n2. Review pod resource limits:\n   ```bash\n   kubectl get pod <pod-name> -o yaml | grep -A 5 resources\n   ```\n3. Check application logs before crash:\n   ```bash\n   kubectl logs <pod-name> --previous\n   ```\n\n## Immediate Resolution\n1. Increase memory limit temporarily:\n   ```bash\n   kubectl set resources deployment <name> --limits=memory=2Gi\n   ```\n2. Monitor pod behavior with new limits\n3. If issue persists, check for memory leaks\n\n## Root Cause Analysis\n1. Profile application memory usage\n2. Review recent code changes\n3. Check for memory leak patterns:\n   - Unclosed connections\n   - Large object retention\n   - Cache growth without eviction\n\n## Long-term Fix\n1. Fix memory leak in application code\n2. Implement proper resource cleanup\n3. Set appropriate memory limits based on profiling\n4. Add memory usage monitoring and alerts\n5. Configure horizontal pod autoscaling if needed\n\n## Monitoring\n- Set alerts for memory usage >80%\n- Track OOMKilled events\n- Monitor pod restart rates",
+    "metadata": {
+      "runbook_id": "RB-004",
+      "service": "Kubernetes",
+      "category": "troubleshooting",
+      "estimated_time": "1-2 hours",
+      "severity": "High"
+    }
+  },
+  {
+    "content": "# Load Balancer Health Check Failures\n\n## Symptoms\n- Backend instances marked unhealthy\n- Traffic not routing to some instances\n- HTTP 500 errors on health endpoint\n- Intermittent application errors\n\n## Diagnostic Steps\n1. Check load balancer target health:\n   ```bash\n   aws elbv2 describe-target-health --target-group-arn <arn>\n   ```\n2. Test health endpoint directly:\n   ```bash\n   curl -v http://<instance-ip>:<port>/health\n   ```\n3. Review application logs on unhealthy instances\n4. Check instance metrics (CPU, memory, disk, network)\n\n## Resolution Steps\n1. If database connection issues:\n   - Check connection pool status\n   - Verify database credentials\n   - Test database connectivity from instance\n   - Increase max connections if needed\n2. If resource exhaustion:\n   - Identify resource bottleneck\n   - Scale instances or increase resources\n   - Clear disk space if needed\n3. If application error:\n   - Review application logs\n   - Restart application if necessary\n   - Deploy fix if bug identified\n4. Update health check settings if too aggressive\n\n## Validation\n1. Verify all instances are healthy\n2. Test application endpoints\n3. Monitor error rates\n4. Check response times\n\n## Prevention\n- Implement connection pooling with proper cleanup\n- Set up resource usage alerts\n- Configure appropriate health check intervals\n- Implement graceful shutdown procedures",
+    "metadata": {
+      "runbook_id": "RB-005",
+      "service": "Load Balancer",
+      "category": "troubleshooting",
+      "estimated_time": "30-90 minutes",
+      "severity": "High"
+    }
+  },
+  {
+    "content": "# Kubernetes Service Discovery Issues\n\n## Symptoms\n- Services cannot communicate\n- DNS resolution failures\n- Connection refused errors between pods\n- Intermittent service unavailability\n\n## Diagnostic Steps\n1. Verify service exists:\n   ```bash\n   kubectl get svc <service-name>\n   ```\n2. Check service endpoints:\n   ```bash\n   kubectl get endpoints <service-name>\n   ```\n3. Verify pod labels match service selector:\n   ```bash\n   kubectl get pods --show-labels\n   kubectl get svc <service-name> -o yaml | grep selector\n   ```\n4. Test DNS resolution from pod:\n   ```bash\n   kubectl exec <pod> -- nslookup <service-name>\n   ```\n\n## Resolution Steps\n1. If no endpoints:\n   - Check pod labels match service selector\n   - Verify pods are running and ready\n   - Update service selector if mismatch\n2. If DNS issues:\n   - Check CoreDNS pods are running\n   - Review CoreDNS logs\n   - Restart CoreDNS if needed\n3. If port mismatch:\n   - Verify service port and targetPort\n   - Check container port in deployment\n4. Apply corrected configuration:\n   ```bash\n   kubectl apply -f service.yaml\n   ```\n\n## Validation\n1. Verify endpoints are populated\n2. Test service connectivity from another pod\n3. Check DNS resolution\n4. Monitor application logs\n\n## Prevention\n- Use consistent labeling conventions\n- Validate service configurations in CI/CD\n- Test service connectivity after deployments\n- Document service dependencies",
+    "metadata": {
+      "runbook_id": "RB-006",
+      "service": "Kubernetes",
+      "category": "networking",
+      "estimated_time": "15-30 minutes",
+      "severity": "Critical"
+    }
+  },
+  {
+    "content": "# SSL Certificate Expiration Response\n\n## Symptoms\n- SSL/TLS handshake failures\n- Certificate expired errors\n- HTTPS requests failing\n- Browser security warnings\n\n## Immediate Actions\n1. Verify certificate expiration:\n   ```bash\n   echo | openssl s_client -servername <domain> -connect <host>:443 2>/dev/null | openssl x509 -noout -dates\n   ```\n2. Check certificate auto-renewal status\n3. Review cert-manager or ACME client logs\n\n## Resolution Steps\n1. If Let's Encrypt certificate:\n   ```bash\n   # Manual renewal\n   certbot renew --force-renewal --cert-name <domain>\n   \n   # Or using cert-manager\n   kubectl delete certificaterequest <name>\n   ```\n2. If commercial certificate:\n   - Obtain new certificate from CA\n   - Update certificate in load balancer/ingress\n   - Verify certificate chain is complete\n3. Update certificate in all required locations:\n   - Load balancer\n   - Ingress controller\n   - API gateway\n   - CDN\n4. Restart services if necessary to load new cert\n\n## Validation\n1. Test HTTPS connection:\n   ```bash\n   curl -v https://<domain>\n   ```\n2. Verify certificate validity period\n3. Check certificate chain completeness\n4. Test from multiple clients/browsers\n\n## Prevention\n- Enable automatic certificate renewal\n- Set up expiration alerts (30, 14, 7 days before)\n- Test auto-renewal process monthly\n- Monitor renewal job logs\n- Use cert-manager for Kubernetes\n- Document renewal procedures",
+    "metadata": {
+      "runbook_id": "RB-007",
+      "service": "Security",
+      "category": "recovery",
+      "estimated_time": "20-40 minutes",
+      "severity": "Critical"
+    }
+  },
+  {
+    "content": "# Message Queue Backlog Recovery\n\n## Symptoms\n- Message queue depth growing\n- Messages not being processed\n- Consumer connection errors\n- Delayed message processing\n\n## Diagnostic Steps\n1. Check queue depth and growth rate:\n   ```bash\n   rabbitmqctl list_queues name messages consumers\n   ```\n2. Verify consumer status and count\n3. Check consumer application logs\n4. Review network connectivity to message broker\n5. Check broker resource usage (CPU, memory, disk)\n\n## Resolution Steps\n1. If consumer connection issues:\n   - Verify network connectivity and firewall rules\n   - Check authentication credentials\n   - Review consumer application logs\n   - Restart consumer if necessary\n2. If broker resource issues:\n   - Clear old messages if safe to do so\n   - Increase broker resources\n   - Scale broker cluster if needed\n3. If processing too slow:\n   - Scale up number of consumers\n   - Optimize message processing logic\n   - Batch process if applicable\n4. Monitor queue depth reduction rate\n\n## Recovery Validation\n1. Verify consumers are connected and processing\n2. Monitor queue depth trending down\n3. Check message processing rate\n4. Review error rates\n\n## Prevention\n- Set up queue depth alerts\n- Implement consumer auto-scaling\n- Configure dead letter queues\n- Monitor consumer health\n- Set message TTL appropriately\n- Test failover scenarios",
+    "metadata": {
+      "runbook_id": "RB-008",
+      "service": "Message Queue",
+      "category": "recovery",
+      "estimated_time": "30-120 minutes",
+      "severity": "High"
+    }
+  },
+  {
+    "content": "# Disk Space Exhaustion Response\n\n## Symptoms\n- Disk usage at 100%\n- Application write failures\n- Database errors\n- Log rotation failures\n- Service degradation or crashes\n\n## Immediate Actions\n1. Check disk usage:\n   ```bash\n   df -h\n   du -sh /* | sort -h\n   ```\n2. Identify largest directories:\n   ```bash\n   du -h --max-depth=1 /var | sort -h\n   ```\n3. Find large files:\n   ```bash\n   find / -type f -size +1G -exec ls -lh {} \\;\n   ```\n\n## Cleanup Steps\n1. Clear log files:\n   ```bash\n   find /var/log -type f -name \"*.log\" -mtime +30 -delete\n   journalctl --vacuum-time=7d\n   ```\n2. Clean package caches:\n   ```bash\n   apt-get clean  # Debian/Ubuntu\n   yum clean all  # RedHat/CentOS\n   ```\n3. Remove old Docker images/containers:\n   ```bash\n   docker system prune -a --volumes\n   ```\n4. Clear application temp files\n5. Archive or delete old backups\n\n## Long-term Solutions\n1. Implement log rotation policies\n2. Set up automated cleanup jobs\n3. Increase disk size if consistently running low\n4. Move large data to object storage (S3, etc.)\n5. Implement disk usage monitoring and alerts\n\n## Monitoring\n- Alert when disk usage >80%\n- Track disk usage trends\n- Monitor log file sizes\n- Review storage growth patterns monthly",
+    "metadata": {
+      "runbook_id": "RB-009",
+      "service": "Infrastructure",
+      "category": "maintenance",
+      "estimated_time": "20-45 minutes",
+      "severity": "High"
+    }
+  },
+  {
+    "content": "# IAM Permission Issues Recovery\n\n## Symptoms\n- Access denied errors\n- 403 Forbidden responses\n- Unable to access AWS resources\n- Application functionality broken\n\n## Diagnostic Steps\n1. Identify the failing operation and resource\n2. Review CloudTrail logs for denied API calls:\n   ```bash\n   aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=<API_CALL>\n   ```\n3. Check current IAM permissions:\n   ```bash\n   aws iam get-user-policy --user-name <user>\n   aws iam list-attached-user-policies --user-name <user>\n   ```\n4. Review recent IAM policy changes\n5. Verify resource-based policies (S3 bucket policy, etc.)\n\n## Resolution Steps\n1. Compare current policy with working version\n2. Identify missing permissions from error message\n3. Update IAM policy with required permissions:\n   ```bash\n   aws iam put-user-policy --user-name <user> --policy-name <name> --policy-document file://policy.json\n   ```\n4. If role-based:\n   - Update role policy\n   - Verify trust relationship\n   - Check assume role permissions\n5. Test access after policy update\n\n## Validation\n1. Retry failed operation\n2. Verify all application features work\n3. Review CloudTrail for successful API calls\n4. Test edge cases\n\n## Prevention\n- Implement policy change approval process\n- Test IAM changes in non-production first\n- Use infrastructure-as-code for IAM (Terraform, CloudFormation)\n- Document required permissions for each service\n- Set up policy validation in CI/CD\n- Maintain policy version history",
+    "metadata": {
+      "runbook_id": "RB-010",
+      "service": "Security",
+      "category": "troubleshooting",
+      "estimated_time": "15-30 minutes",
+      "severity": "Medium"
+    }
+  }
+]

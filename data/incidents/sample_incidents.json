@@ -1,0 +1,122 @@
+[
+  {
+    "content": "API Gateway service experienced 504 Gateway Timeout errors affecting 80% of incoming requests. Logs showed 'Connection timeout after 30s' errors when connecting to backend database service. Root cause analysis revealed database connection pool exhausted due to long-running queries not being terminated properly. Resolution: Increased connection pool max size from 50 to 200, implemented connection timeout of 10s, and added query timeout enforcement. Service recovered within 15 minutes.",
+    "metadata": {
+      "incident_id": "INC-2024-001",
+      "service": "API Gateway",
+      "severity": "Critical",
+      "date": "2024-01-15",
+      "root_cause": "Database connection pool exhaustion",
+      "resolution_time": "15 minutes",
+      "affected_users": "80%"
+    }
+  },
+  {
+    "content": "PostgreSQL database became unresponsive with CPU usage at 100%. Analysis of pg_stat_activity showed 50+ concurrent queries with full table scans on 'users' table (5M rows). Missing index on frequently queried 'email' column caused performance degradation. Fixed by creating index on users.email and killing long-running queries. Performance returned to normal after index creation completed.",
+    "metadata": {
+      "incident_id": "INC-2024-002",
+      "service": "Database",
+      "severity": "High",
+      "date": "2024-01-22",
+      "root_cause": "Missing database index causing full table scans",
+      "resolution_time": "45 minutes",
+      "affected_users": "60%"
+    }
+  },
+  {
+    "content": "Redis cache cluster reported 'READONLY You can't write against a read only replica' errors. Investigation showed master node had crashed and failover to replica did not complete automatically. Manual intervention required to promote replica to master using redis-cli. Root cause: cluster misconfiguration prevented automatic failover. Resolution: Reconfigured Redis Sentinel settings and verified automatic failover works correctly.",
+    "metadata": {
+      "incident_id": "INC-2024-003",
+      "service": "Cache",
+      "severity": "Critical",
+      "date": "2024-02-05",
+      "root_cause": "Redis master node failure with failed automatic failover",
+      "resolution_time": "30 minutes",
+      "affected_users": "100%"
+    }
+  },
+  {
+    "content": "Kubernetes pods continuously restarting with OOMKilled status. Container logs showed Java heap space errors. Memory profiling revealed memory leak in image processing service due to unreleased bitmap objects. Immediate fix: increased pod memory limit from 512Mi to 2Gi. Long-term fix: patched application code to properly dispose of bitmap objects and implemented memory monitoring alerts.",
+    "metadata": {
+      "incident_id": "INC-2024-004",
+      "service": "Kubernetes",
+      "severity": "High",
+      "date": "2024-02-12",
+      "root_cause": "Memory leak causing OOM in container",
+      "resolution_time": "2 hours",
+      "affected_users": "30%"
+    }
+  },
+  {
+    "content": "Load balancer health checks failing for 3 out of 5 backend instances. HTTP 500 errors observed on /health endpoint. Application logs showed database connection failures with 'too many connections' error (max_connections=100). Analysis revealed connection leak where connections were not being closed properly after use. Temporary fix: restarted affected instances and increased max_connections to 200. Permanent fix: deployed code patch to ensure proper connection cleanup in finally blocks.",
+    "metadata": {
+      "incident_id": "INC-2024-005",
+      "service": "Load Balancer",
+      "severity": "High",
+      "date": "2024-02-20",
+      "root_cause": "Database connection leak exceeding max connections",
+      "resolution_time": "1 hour",
+      "affected_users": "40%"
+    }
+  },
+  {
+    "content": "Nginx ingress controller logs filled with 'upstream connect error or disconnect/reset before headers' messages. Backend service pods were healthy but not receiving traffic. Investigation revealed service selector mismatch - service was selecting pods with label 'app=backend-v2' but pods had label 'app=backend'. Fixed by correcting service selector in Kubernetes service definition. Traffic immediately resumed after applying corrected configuration.",
+    "metadata": {
+      "incident_id": "INC-2024-006",
+      "service": "Kubernetes",
+      "severity": "Critical",
+      "date": "2024-03-01",
+      "root_cause": "Kubernetes service selector mismatch",
+      "resolution_time": "20 minutes",
+      "affected_users": "100%"
+    }
+  },
+  {
+    "content": "S3 bucket access denied errors preventing application from uploading files. CloudTrail logs showed IAM policy changes made during deployment. New IAM policy was too restrictive and removed necessary s3:PutObject permission. Rolled back IAM policy to previous version and file uploads resumed. Implemented policy change approval process to prevent similar issues.",
+    "metadata": {
+      "incident_id": "INC-2024-007",
+      "service": "Storage",
+      "severity": "Medium",
+      "date": "2024-03-10",
+      "root_cause": "IAM policy change removed required S3 permissions",
+      "resolution_time": "25 minutes",
+      "affected_users": "15%"
+    }
+  },
+  {
+    "content": "RabbitMQ message queue depth growing exponentially with messages not being processed. Consumer service logs showed 'connection refused' errors to RabbitMQ on port 5672. Network security group had been updated removing inbound rule for port 5672. Re-added security group rule and consumers immediately began processing backlog. Queue depth returned to normal after 2 hours of processing.",
+    "metadata": {
+      "incident_id": "INC-2024-008",
+      "service": "Message Queue",
+      "severity": "High",
+      "date": "2024-03-18",
+      "root_cause": "Security group rule blocking RabbitMQ port",
+      "resolution_time": "10 minutes to fix, 2 hours to clear backlog",
+      "affected_users": "50%"
+    }
+  },
+  {
+    "content": "Elasticsearch cluster status showing yellow with unassigned shards. Disk usage on 2 of 3 nodes exceeded 85% threshold causing Elasticsearch to prevent shard allocation. Cleared old indices using curator and deleted logs older than 90 days. Disk usage dropped to 60% and shards automatically rebalanced. Implemented automated index lifecycle management to prevent recurrence.",
+    "metadata": {
+      "incident_id": "INC-2024-009",
+      "service": "Elasticsearch",
+      "severity": "Medium",
+      "date": "2024-03-25",
+      "root_cause": "Disk space exhaustion preventing shard allocation",
+      "resolution_time": "40 minutes",
+      "affected_users": "0% (degraded performance only)"
+    }
+  },
+  {
+    "content": "Certificate expired on API Gateway causing SSL/TLS handshake failures. All HTTPS requests returned 'certificate has expired' error. Let's Encrypt auto-renewal had failed silently due to DNS challenge validation timeout (DNS provider rate limit). Manually renewed certificate using HTTP challenge and updated cert-manager configuration to use HTTP-01 challenge instead of DNS-01. Configured monitoring alerts for certificates expiring within 30 days.",
+    "metadata": {
+      "incident_id": "INC-2024-010",
+      "service": "API Gateway",
+      "severity": "Critical",
+      "date": "2024-04-02",
+      "root_cause": "SSL certificate expiration due to failed auto-renewal",
+      "resolution_time": "35 minutes",
+      "affected_users": "100%"
+    }
+  }
+]
