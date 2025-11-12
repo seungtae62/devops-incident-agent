@@ -2,6 +2,7 @@ import streamlit as st
 import json
 from src.config import Config
 from src.agents.supervisor import create_workflow
+from src.rag.retriever import DocumentRetriever
 
 st.set_page_config(
     page_title="DevOps Incident Response Agent",
@@ -191,7 +192,6 @@ def main():
             st.success("✓ Configuration valid")
 
             # Show Qdrant status
-            from src.rag.retriever import DocumentRetriever
             retriever = DocumentRetriever(qdrant_url=f"http://{Config.QDRANT_URL}")
             status = retriever.get_status()
 
